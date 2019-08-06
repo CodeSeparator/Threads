@@ -97,8 +97,8 @@ namespace Python
             {
                 grow++;
             }
-            Coord none = new Coord(-1,-1);
-            if(body.Count > 1)
+            Coord none = new Coord(-1, -1);
+            if (body.Count > 1)
             {
                 if (grow > 0)
                     grow--;
@@ -115,6 +115,7 @@ namespace Python
         private static char[,] screen = new char[size.x, size.y];
         private static object block = new object();
         static Random rnd = new Random();
+        private static int number = 0;
 
         public static void InitScreen()
         {
@@ -138,7 +139,7 @@ namespace Python
             lock (block)
             {
                 if (!Onscreen(coord))
-                    return; 
+                    return;
                 screen[coord.x, coord.y] = a;
                 Console.ForegroundColor = color;
                 Console.SetCursorPosition(coord.x, coord.y);
@@ -192,7 +193,9 @@ namespace Python
         Coord step;
         ConsoleColor color;
         Queue<Coord> body;
+        bool dead;
         int grow;
+        int nr;
 
         public static Python Create()
         {
@@ -204,6 +207,8 @@ namespace Python
             if (loop <= 0)
                 return null;
             Python python = new Python(start);
+            python.nr = number;
+            number++;
             return python;
         }
         private Python(Coord start)
@@ -213,19 +218,48 @@ namespace Python
             body.Enqueue(head);
             this.color = (ConsoleColor)rnd.Next(1, 15);
             TurnTo(Arrow.R);
+            grow = 0;
+            dead = false;
 
         }
         public void Run()
         {
             while (true)
             {
-                Step();
-                AddHare();
-                Thread.Sleep(50);
-                //if (rnd.Next(100) == 0)
-                //    break;
+
+                try
+                {
+                    while (true)
+                    {
+                        Step();
+                        AddHare();
+                        Info();
+                        //if (rnd.Next(100) == 0)
+                        //    break;
+                        Thread.Sleep(50);
+                        PutScreen(head, color, aNone);
+                        if (dead && body.Count <= 1)
+                        {
+                            return;
+                        }
+                    }
+                }
+                catch (ThreadAbortException ex)
+                {
+                    dead = true;
+                    Thread.ResetAbort();
+                }
             }
-            PutScreen(head, color, aNone);
+        }
+
+        private void Info()
+        {
+            lock (block)
+            {
+                Console.SetCursorPosition(size.x + 2, nr);
+                Console.ForegroundColor = color;
+                Console.Write(nr + " " + body.Count + "#" + Thread.CurrentThread.ManagedThreadId);
+            }
         }
     }
 }
